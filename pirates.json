@@ -1,0 +1,72 @@
+[
+  {
+    "id": 1,
+    "name": "Monkey D. Luffy",
+    "role": "Capitão",
+    "bounty": 3000000000,
+    "devilFruit": true
+  },
+  {
+    "id": 2,
+    "name": "Roronoa Zoro",
+    "role": "Espadachim",
+    "bounty": 1111000000,
+    "devilFruit": false
+  },
+  {
+    "id": 3,
+    "name": "Nami",
+    "role": "Navegadora",
+    "bounty": 366000000,
+    "devilFruit": false
+  },
+  {
+    "id": 4,
+    "name": "Usopp",
+    "role": "Atirador",
+    "bounty": 500000000,
+    "devilFruit": false
+  },
+  {
+    "id": 5,
+    "name": "Sanji",
+    "role": "Cozinheiro",
+    "bounty": 1032000000,
+    "devilFruit": false
+  },
+  {
+    "id": 6,
+    "name": "Tony Tony Chopper",
+    "role": "Médico",
+    "bounty": 1000,
+    "devilFruit": true
+  },
+  {
+    "id": 7,
+    "name": "Nico Robin",
+    "role": "Arqueóloga",
+    "bounty": 930000000,
+    "devilFruit": true
+  },
+  {
+    "id": 8,
+    "name": "Franky",
+    "role": "Carpinteiro",
+    "bounty": 394000000,
+    "devilFruit": false
+  },
+  {
+    "id": 9,
+    "name": "Brook",
+    "role": "Músico",
+    "bounty": 383000000,
+    "devilFruit": true
+  },
+  {
+    "id": 10,
+    "name": "Jinbe",
+    "role": "Timoneiro",
+    "bounty": 1100000000,
+    "devilFruit": false
+  }
+]
