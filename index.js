@@ -7,8 +7,49 @@ const pirates = require("./pirates.json")
 
 app.use(express.json())
 
+
+// MIDDLEWARES:
+function verificarPirata(req, res, next) {
+    const { id } = req.params
+    const pirate = pirates.find(p => p.id === parseInt(id))
+
+    if (!pirate) {
+        return res.status(404).json({message: "O pirata não existe!"})
+    }
+
+    res.pirate = pirate
+    next()
+}
+
+function indicePirata(req, res, next) {
+    const index = pirates.findIndex(p => p.id === res.pirate.id)
+    if (index === -1) {
+        return res.status(404).json({message: "Índice não encontrado"})
+    }
+    res.pirateIndex = index
+    next()
+}
+
+function validarCampos(req, res, next) {
+    const newPirate = req.body
+    const { name, role } = newPirate
+    if (!name || !role) {
+        return res.status(400).json({message: "Os campos Nome e Cargo do pirata são obrigatórios"})
+    }
+    res.newPirate = newPirate
+    
+    next()
+}
+
+function encontrarProximoId(req, res, next) {
+    const newId = pirates.length > 0 ? Math.max(...pirates.map(p => p.id)) + 1 : 1
+    res.newId = newId
+    
+    next()
+}
+
 app.listen(3000, function() {
-    console.log("API funcionado")
+    console.log("API funcionando")
 })
 
 
@@ -18,61 +59,41 @@ app.get("/pirates", function(req, res) {
     res.json(pirates)
 })
 // individual
-app.get("/pirates/:id", function(req, res) {
-    const { id } = req.params
-    const resp = pirates.find(pirate => pirate.id === parseInt(id))
-    if (!resp) {
-        console.log("Pirata não existe")
-        return res.status(404).json({message: "Pirata não existe"})
-    }
-    res.json(resp)
+app.get("/pirates/:id", verificarPirata, function(req, res) {
+    res.json(res.pirate)
 })
 
 // ROTA POST
-app.post("/pirates", function(req, res) {
-    const newPirate = req.body
-    if (!newPirate.name || !newPirate.role) {
-        console.log("Nome e cargo de pirata obrigatórios!")
-        return res.status(400).json({message: "Nome e cargo de pirata obrigatórios!"})
-    }
-    const newId = pirates.length > 0 ? Math.max(...pirates.map(pirate => pirate.id)) + 1 : 1
-    newPirate.id = newId
+app.post("/pirates", validarCampos, encontrarProximoId, function(req, res) {
 
-    pirates.push(newPirate)
+    res.newPirate.id = res.newId
+    pirates.push(res.newPirate)
+
     fs.writeFileSync('./pirates.json', JSON.stringify(pirates, null, 2))
 
     console.log("Arquivo adicionado!")
-    res.status(201).json(newPirate);
+    res.status(201).json(res.newPirate);
 })
 
 // ROTA PUT
-app.put("/pirates/:id", function(req, res) {
-    const { id } = req.params
+app.put("/pirates/:id", verificarPirata, indicePirata, function(req, res) {
     const rePirate = req.body
 
-    const index = pirates.findIndex(pirate => pirate.id === parseInt(id))
-    if (index === -1) {
-      return res.status(404).json({message: "Pirata não encontrado"})
-    }
-    pirates[index] = {...pirates[index], ...rePirate, id: pirates[index].id}
+    pirates[res.pirateIndex] = {...pirates[res.pirateIndex], ...rePirate, id: pirates[res.pirateIndex].id}
 
     fs.writeFileSync('./pirates.json', JSON.stringify(pirates, null, 2))
 
     console.log("Arquivo alterado")
-    res.json(pirates[index])
+    res.json(pirates[res.pirateIndex])
 })
 
 // ROTA DELETE
-app.delete("/pirates/:id", function(req, res) {
-    const { id } = req.params
-    const index = pirates.findIndex(pirate => pirate.id === parseInt(id))
-
-    if (index === -1) {
-        return res.status(404).json({message: "Este pirata não existe"})
-    }
-    const deletedPirated = pirates.splice(index, 1)
+app.delete("/pirates/:id", verificarPirata, indicePirata, function(req, res) {
+    
+    const deletedPirated = pirates.splice(res.pirateIndex, 1)
     
     fs.writeFileSync('./pirates.json', JSON.stringify(pirates, null, 2))
+
     res.status(200).json({
         message: "Pirata removido com sucesso",
         pirate: deletedPirated[0]

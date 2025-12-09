@@ -68,5 +68,10 @@
     "role": "Timoneiro",
     "bounty": 1100000000,
     "devilFruit": false
+  },
+  {
+    "name": "Caio",
+    "role": "Programador",
+    "id": 11
   }
 ]
