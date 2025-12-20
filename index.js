@@ -1,49 +1,26 @@
 const express = require('express')
-const fs = require('fs')
-
 const app = express()
-const pirates = require("./pirates.json")
+
+const pool = require('./database')
 
 
 app.use(express.json())
 
 // MIDDLEWARES:
-function verificarPirata(req, res, next) {
-    const { id } = req.params
-    const pirate = pirates.find(p => p.id === parseInt(id))
-
-    if (!pirate) {
-        return res.status(404).json({message: "O pirata não existe!"})
-    }
-
-    res.pirate = pirate
-    next()
-}
-
-function indicePirata(req, res, next) {
-    const index = pirates.findIndex(p => p.id === res.pirate.id)
-    if (index === -1) {
-        return res.status(404).json({message: "Índice não encontrado"})
-    }
-    res.pirateIndex = index
-    next()
-}
 
 function validarCampos(req, res, next) {
-    const newPirate = req.body
-    const { name, role } = newPirate
+    const { name, role } = req.body
     if (!name || !role) {
         return res.status(400).json({message: "Os campos Nome e Cargo do pirata são obrigatórios"})
     }
-    res.newPirate = newPirate
     
     next()
 }
 
-function encontrarProximoId(req, res, next) {
-    const newId = pirates.length > 0 ? Math.max(...pirates.map(p => p.id)) + 1 : 1
-    res.newId = newId
-    
+function verificarId(req, res, next) {
+    if (isNaN(req.params.id)) {
+        return res.status(400).json({message: "ID inválido!"})
+    }
     next()
 }
 
@@ -51,59 +28,122 @@ app.listen(3000, function() {
     console.log("API funcionando")
 })
 
-
 // ROTA GET
 // geral
-app.get("/pirates", function(req, res) {
-    res.json(pirates)
+
+app.get("/pirates", async function(req, res, next) {
+    try {
+        const { rows } = await pool.query('select * from pirates')
+        res.json(rows)
+    } catch(err) {
+        next(err)
+    }
 })
 // individual
-app.get("/pirates/:id", verificarPirata, function(req, res) {
-    res.json(res.pirate)
+app.get("/pirates/:id", verificarId, async function(req, res, next) {
+    try {
+        const { id } = req.params
+        const { rows } = await pool.query("select * from pirates where id = $1", [id])
+
+        if (rows.length === 0) {
+            return res.status(404).json({error: "Pirata não encontrado"})
+        }
+
+        res.json(rows[0])
+    } catch (err) {
+        next(err)
+    }
 })
 
 // ROTA POST
-app.post("/pirates", validarCampos, encontrarProximoId, function(req, res, next) {
+app.post("/pirates", validarCampos, async function(req, res, next) {
     try {
-        res.newPirate.id = res.newId
-        pirates.push(res.newPirate)
+        const { name, role, bounty, devilFruit } = req.body
 
-        fs.writeFileSync('./pirates.json', JSON.stringify(pirates, null, 2))
+        const query = `insert into pirates(name, role, bounty, devilFruit)
+        values($1, $2, $3, $4) returning *`
 
-        console.log("Arquivo adicionado!")
-        res.status(201).json(res.newPirate);
-    } catch (erro) {
-        next(erro)
+        const newPirate = await pool.query(query, [name, role, bounty, devilFruit]
+        )
+        res.status(201).json(newPirate.rows[0])
+    }
+    catch (err) {
+        next(err)
     }
 })
 
 // ROTA PUT
-app.put("/pirates/:id", verificarPirata, indicePirata, function(req, res, next) {
+app.put("/pirates/:id", verificarId, validarCampos, async function(req, res, next) {
     try {
-        const rePirate = req.body
+        const { name, role, bounty, devilFruit } = req.body
+        const { id } = req.params
 
-        pirates[res.pirateIndex] = {...pirates[res.pirateIndex], ...rePirate, id: pirates[res.pirateIndex].id}
-
-        fs.writeFileSync('./pirates.json', JSON.stringify(pirates, null, 2))
-
-        console.log("Arquivo alterado")
-        res.json(pirates[res.pirateIndex])
+        const { rows } = await pool.query(`update pirates
+            set name = $2,
+            role = $3,
+            bounty = $4,
+            devilFruit = $5
+            where id = $1
+            returning *`, [id, name, role, bounty, devilFruit])
+        
+        if (rows.length === 0) {
+            return res.status(404).json({error: "Pirata não foi encontrado"})
+        }
+        res.json(rows[0])
     }
-    catch (erro) {
-        next(erro)
+    catch (err) {
+        next(err)
     }
 })
 
-// ROTA DELETE
-app.delete("/pirates/:id", verificarPirata, indicePirata, function(req, res, next) {
-    try {    
-        const deletedPirated = pirates.splice(res.pirateIndex, 1)
-        
-        fs.writeFileSync('./pirates.json', JSON.stringify(pirates, null, 2))
+app.patch("/pirates/:id", verificarId, async function(req, res, next) {
+    try {
+        const { id } = req.params
+        const body = req.body
+        const allowedFields = ['name', 'role', 'bounty', 'devilFruit']
+        const fields = []
+        const values = []
+        let index = 2
 
+        for (const key in body) { 
+            if (!allowedFields.includes(key)) continue
+            
+            fields.push(`${key} = $${index}`) 
+            values.push(body[key])
+            index++
+        }
+        if (fields.length === 0) {
+            return res.status(400).json({message: "Nenhum campo fornecido para a atualização"})
+        }
+        
+        const query = `update pirates set ${fields.join(", ")} where id = $1 returning *`
+
+        const { rows } = await pool.query(query, [id, ...values])
+        
+        if (rows.length === 0) {
+            return res.status(404).json({message: "Pirata não encontrado"})
+        }
+
+        res.json(rows[0])
+    } catch(err) {
+        next(err)
+    }
+})
+
+
+// ROTA DELETE
+app.delete("/pirates/:id", verificarId, async function(req, res, next) {
+    try {    
+        const { id } = req.params
+        
+        const { rows } = await pool.query('delete from pirates where id = $1 returning *', [id])
+
+        if (rows.length === 0) {
+            return res.status(404).json({message:"O id do pirata não existe"})
+        }
         res.status(200).json({
             message: "Pirata removido com sucesso",
-            pirate: deletedPirated[0]
+            pirate: rows[0]
         })
     }
     catch (erro) {
