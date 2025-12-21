@@ -1,0 +1,8 @@
+function verificarId(req, res, next) {
+    if (isNaN(req.params.id)) {
+        return res.status(400).json({message: "ID inválido!"})
+    }
+    next()
+}
+
+module.exports = verificarId
