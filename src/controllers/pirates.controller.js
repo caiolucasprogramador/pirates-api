@@ -1,9 +1,10 @@
 const pool = require("../database")
+const { findAllPirates } = require("../services/pirates.services")
 
 async function getAllPirates(req, res, next) {
     try {
-        const { rows } = await pool.query('select * from pirates')
-        res.json(rows)
+        const pirates = await findAllPirates
+        res.json(pirates)
     } catch(err) {
         next(err)
     }
