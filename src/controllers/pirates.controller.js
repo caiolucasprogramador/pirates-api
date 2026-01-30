@@ -3,7 +3,7 @@ const { findAllPirates } = require("../services/pirates.services")
 
 async function getAllPirates(req, res, next) {
     try {
-        const pirates = await findAllPirates
+        const pirates = await findAllPirates()
         res.json(pirates)
     } catch(err) {
         next(err)
@@ -27,11 +27,11 @@ async function getPirateById(req, res, next) {
 
 async function createPirate(req, res, next) {
     try {
-        const { name, role, bounty, devilFruit } = req.body
+        const { name, role, bounty, devilfruit } = req.body
         const query = `insert into pirates(name, role, bounty, devilFruit) 
         values($1, $2, $3, $4) returning *`
         
-        const newPirate = await pool.query(query, [name, role, bounty, devilFruit])
+        const newPirate = await pool.query(query, [name, role, bounty, devilfruit])
 
         res.status(201).json(newPirate.rows[0])
     }
@@ -43,12 +43,12 @@ async function createPirate(req, res, next) {
 async function updatePirate(req, res, next) {
     try {
         const { id } = req.params
-        const { name, role, bounty, devilFruit } = req.body
+        const { name, role, bounty, devilfruit } = req.body
         const query = `update pirates 
         set name = $2, role = $3, bounty = $4, devilFruit = $5
         where id = $1 returning *`
 
-        const updatedPirate = await pool.query(query, [id, name, role, bounty, devilFruit])
+        const updatedPirate = await pool.query(query, [id, name, role, bounty, devilfruit])
 
         if (updatedPirate.rows.length === 0) {
             return res.status(404).json({message: "Pirata não encontrado."})
@@ -65,7 +65,7 @@ async function patchPirate(req, res, next) {
     try {
         const { id } = req.params
         const body = req.body
-        const allowedFields = ['name', 'role', 'bounty', 'devilFruit']
+        const allowedFields = ['name', 'role', 'bounty', 'devilfruit']
         const fields = []
         const values = []
         let index = 2
